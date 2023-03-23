@@ -32,10 +32,11 @@ def read_all_terms_from_file_to_lower(file_name: str) -> List[str]:
     """
     with open(file=file_name) as input_file:
         all_words = []
-        for line in input_file.read().split("\n"):
+        for line in input_file.read().split("\n"):  # breaking into lines
             all_words += [
                 remove_special_chars(term.lower())
                 for term in line.strip().split(" ")
+                # strip used for removing trailing white spaces and spliting into words
             ]
 
     return all_words

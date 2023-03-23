@@ -34,6 +34,8 @@ def build_bags_of_words(
     """
     vocabulario = read_all_terms_from_file_to_lower(file_name=vocabulary_file)
 
+    # in the end will be a dict with the key being the file name and the value will be
+    # the bag of words of the file
     bags_of_words = {}
     for document in document_files:
         bags_of_words.update({
