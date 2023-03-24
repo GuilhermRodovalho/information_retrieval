@@ -22,7 +22,7 @@ def bag_of_words(vocabulary: List[str], document_words: List[str]) -> BagOfWords
 
 def build_bags_of_words(
     vocabulary_file: str = "vocabulario.txt",
-    document_files: Iterable[str] = ("document.txt",)
+    document_files: Iterable[str] = ("document.txt",),
 ) -> Dict[str, BagOfWords]:
     """
     given vocabulary and documents files names, return the bag of words of this
@@ -32,22 +32,20 @@ def build_bags_of_words(
     :param document_files: an iterable of document_words names
     :return: returns a dict of the type {file_name: bag_of_words of the file}
     """
-    vocabulario = read_all_terms_from_file_to_lower(file_name=vocabulary_file)
+    vocabulary = read_all_terms_from_file_to_lower(file_name=vocabulary_file)
 
     # in the end will be a dict with the key being the file name and the value will be
     # the bag of words of the file
     bags_of_words = {}
     for document in document_files:
-        bags_of_words.update({
-            document: bag_of_words(
-                vocabulary=vocabulario,
-                document_words=read_all_terms_from_file_to_lower(file_name=document)
-            )
-        })
+        document_words = read_all_terms_from_file_to_lower(file_name=document)
+        bags_of_words.update(
+            {
+                document: bag_of_words(
+                    vocabulary=vocabulary,
+                    document_words=document_words,
+                )
+            }
+        )
 
     return bags_of_words
-
-
-if __name__ == '__main__':
-    result = build_bags_of_words()
-    print(result)
