@@ -162,7 +162,6 @@ def calculate_tf_idf(
     return tf_idf_by_file
 
 
-# Talvez refatorar para retornar os arquivos dos diretórios filhos do diretório passado
 def get_all_files_in_directory(directory_name: str) -> List[str]:
     """
     Given a directory name, return all the files in the directory with the full path
@@ -171,7 +170,10 @@ def get_all_files_in_directory(directory_name: str) -> List[str]:
     :return: a list of files with the full path
     """
     # read all files from the directory
-    root, _, files = next(os.walk(directory_name))
+    files_names = []
 
-    # add the root folder before the filename
-    return list(map(lambda file: root + "/" + file, files))
+    for root, _, files in os.walk(directory_name):
+        for file in files:
+            files_names.append(os.path.join(root, file))
+
+    return files_names

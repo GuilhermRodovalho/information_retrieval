@@ -11,7 +11,9 @@ from utils import (
 )
 
 
-def questao2(vocabulary_file: str = "vocabulario", documents_path: str = "arquivos"):
+def questao2(
+    vocabulary_file: str = "vocabulario", documents_path: str = "arquivos/todo"
+):
     # read the vocabulary
     vocabulary = read_all_terms_from_file_to_lower(file_name=vocabulary_file)
 
