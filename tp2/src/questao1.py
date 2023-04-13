@@ -1,14 +1,14 @@
-import os
+from utils import (
+    build_vocabulary_from_files,
+    get_all_files_in_directory,
+    write_data_to_file,
+    build_bags_of_words,
+)
 
-from utils import build_vocabulary_from_files, write_data_to_file, build_bags_of_words
 
-
+# TODO: fazer com que pegue todos os arquivos dos subdiretórios também
 def questao1(input_dir="arquivos", output_file="output_q1.txt"):
-    # read all files from the directory
-    root, _, files = next(os.walk(input_dir))
-
-    # add the root folder before the filename
-    files = list(map(lambda file: root + "/" + file, files))
+    files = get_all_files_in_directory(input_dir)
 
     vocabulary = build_vocabulary_from_files(files)
     write_data_to_file(output_file, vocabulary)

@@ -1,6 +1,9 @@
+import os
 from typing import Dict, List, Iterable
 
 from unidecode import unidecode
+
+from models import IdfBuilder, TfBuilder
 
 
 # TODO: criar um arquivo para parsing de caracteres
@@ -35,8 +38,8 @@ def read_all_terms_from_file_to_lower(file_name: str) -> List[str]:
         for line in input_file.read().split("\n"):  # breaking into lines
             all_words += [
                 remove_special_chars(term.lower())
-                for term in line.strip().split(" ")
-                # strip used for removing trailing white spaces and spliting into words
+                for term in line.strip().split()  # strip used for removing trailing white spaces and spliting into words
+                if term
             ]
 
     return all_words
@@ -119,9 +122,56 @@ def build_bags_of_words(
     return bags_of_words
 
 
-# TODO
 def calculate_tf_idf(
-    bags_of_words: Dict[str, BagOfWords],
+    vocabulary: List[str],
     document_files: Iterable[str] = ("document.txt",),
-) -> Dict[str, List[float]]:
-    pass
+) -> Dict[str, Dict[str, float]]:
+    """
+    Given a dict of bags of words and the files names, calculate the tf-idf of each
+    """
+    idf_builder = IdfBuilder(vocabulary=vocabulary)
+    tf_by_file = {}
+
+    for file in document_files:
+        file_content = read_all_terms_from_file_to_lower(file_name=file)
+        # TODO
+        # considering that we are iterating through the file content twice
+        # we could optimize this by creating a function that returns both
+        # but for now it's ok
+        tf = TfBuilder.calculate_tf(file_content)
+        idf_builder.add_document_terms(set(file_content))
+
+        tf_by_file.update({file: tf})
+
+    idf_builder.calculate_idf()
+
+    tf_idf_by_file: Dict[str, Dict[str, float]] = {}
+
+    # calculate the tf_idf by file
+    for file, tf in tf_by_file.items():
+        tf_idf_by_file.update(
+            {
+                file: {
+                    word: tf[word] * idf_builder[word]
+                    for word in tf.keys()
+                    if idf_builder[word] != 0
+                }
+            }
+        )
+
+    return tf_idf_by_file
+
+
+# Talvez refatorar para retornar os arquivos dos diretórios filhos do diretório passado
+def get_all_files_in_directory(directory_name: str) -> List[str]:
+    """
+    Given a directory name, return all the files in the directory with the full path
+
+    :param directory_name: the name of the directory
+    :return: a list of files with the full path
+    """
+    # read all files from the directory
+    root, _, files = next(os.walk(directory_name))
+
+    # add the root folder before the filename
+    return list(map(lambda file: root + "/" + file, files))

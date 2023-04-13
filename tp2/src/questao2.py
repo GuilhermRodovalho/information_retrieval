@@ -1,35 +1,25 @@
 """
 create a program that receive a vocabulary file and a path with documents
 and it will do:
-1 - calculate and exibit the tf-idf of each document 
+1 - calculate and exibit the tf_builder-idf_builder of each document 
 
 """
-
-import os
-
 from utils import (
-    build_bags_of_words,
+    get_all_files_in_directory,
     read_all_terms_from_file_to_lower,
     calculate_tf_idf,
-    write_data_to_file,
 )
 
 
-def questao2(vocabulary_file: str, documents_path: str, output_file: str):
+def questao2(vocabulary_file: str = "vocabulario", documents_path: str = "arquivos"):
     # read the vocabulary
     vocabulary = read_all_terms_from_file_to_lower(file_name=vocabulary_file)
-    # read all files from the directory
-    root, _, files = next(os.walk(documents_path))
 
-    # add the root folder before the filename
-    files = list(map(lambda file: root + "/" + file, files))
+    files = get_all_files_in_directory(directory_name=documents_path)
 
-    bags = build_bags_of_words(vocabulary, files)
-
-    # calculate the tf-idf of each document
-    tf_idf = calculate_tf_idf(bags, files)
-
-    # write the tf-idf to a file
-    write_data_to_file(output_file, tf_idf)
+    tf_idf = calculate_tf_idf(document_files=files, vocabulary=vocabulary)
 
     print(tf_idf)
+
+
+questao2()
