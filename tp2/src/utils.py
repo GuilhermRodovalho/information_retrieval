@@ -138,7 +138,7 @@ def calculate_tf_idf(
         # considering that we are iterating through the file content twice
         # we could optimize this by creating a function that returns both
         # but for now it's ok
-        tf = TfBuilder.calculate_tf(file_content)
+        tf = TfBuilder.calculate_tf(file_content, vocabulary)
         idf_builder.add_document_terms(set(file_content))
 
         tf_by_file.update({file: tf})

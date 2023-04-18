@@ -6,8 +6,7 @@ from utils import (
 )
 
 
-# TODO: fazer com que pegue todos os arquivos dos subdiretórios também
-def questao1(input_dir="arquivos", output_file="output_q1.txt"):
+def questao1(input_dir="arquivos/todo", output_file="output_q1.txt"):
     files = get_all_files_in_directory(input_dir)
 
     vocabulary = build_vocabulary_from_files(files)

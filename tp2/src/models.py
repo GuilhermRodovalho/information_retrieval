@@ -43,13 +43,26 @@ class IdfBuilder:
 
 class TfBuilder:
     @staticmethod
-    def calculate_tf(words: List[str]) -> Dict[str, float]:
+    def calculate_tf(words: List[str], vocabulary: List[str]) -> Dict[str, float]:
         """
-        Given a document file, calculate the tf of each word in the document
+        Given a list of words and a vocabulary, calculate the tf of each word in the
+        document that is in the vocabulary, and 0 for the ones that are only in the
+        vocabulary
 
         :param document_file: a file name
+        :param vocabulary: a list of words
         :return: a dict of the type {word: tf}
         """
         words_frequency = Counter(words)
-        tf = {word: 1 + log2(frequency) for word, frequency in words_frequency.items()}
+
+        # tf = {word: 1 + log2(frequency) for word, frequency in words_frequency.items()}
+
+        # calculate tf using the words that are in the vocabulary
+        tf = {}
+        for word in vocabulary:
+            if word in words_frequency:
+                tf[word] = 1 + log2(words_frequency[word])
+            else:
+                tf[word] = 0
+
         return tf
