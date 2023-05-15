@@ -2,7 +2,7 @@ import datetime
 from math import sqrt
 import os
 import re
-from typing import Callable, Dict, List, Iterable, Tuple, Collection
+from typing import Callable, Dict, List, Iterable, Optional, Tuple, Collection, Union
 
 from unidecode import unidecode
 
@@ -34,6 +34,7 @@ def read_all_terms_from_file_to_lower(
     file_name: str,
     remove_special_chars: Callable[[str], str] = remove_special_chars,
     stopwords: Collection[str] = [],
+    stemmer: Callable[[str], str] = lambda x: x,
 ) -> List[str]:
     """
     Given a file name, reads all the content and return a list with
@@ -44,13 +45,12 @@ def read_all_terms_from_file_to_lower(
     :return: a list with the words
     """
     with open(file=file_name) as input_file:
-        all_words = []
-        for line in input_file.read().split("\n"):  # breaking into lines
-            all_words += [
-                remove_special_chars(term.lower())
-                for term in line.strip().split()  # strip used for removing trailing white spaces and spliting into words
-                if term not in stopwords
-            ]
+        all_words = [
+            stemmer(remove_special_chars(term.lower()))
+            for line in input_file.readlines()
+            for term in line.strip().split()
+            if term not in stopwords
+        ]
 
     return all_words
 
@@ -63,13 +63,13 @@ def write_data_to_file(file_name: str, words: Iterable[str]) -> None:
     :param words: list of str to write to the file
     """
     with open(file=file_name, mode="w") as output:
-        for word in words:
-            output.write(word)
-            output.write("\n")
+        output.write("\n".join(words))
 
 
 def build_vocabulary_from_files(
     files: Iterable[str] = ("document.txt",),
+    stemmer: Callable[[str], str] = lambda x: x,
+    stopwords: Collection[str] = [],
 ) -> List[str]:
     """
     Given a list of files, returns a vocabulary with all the words from the files
@@ -78,8 +78,15 @@ def build_vocabulary_from_files(
     :return: a list of words
     """
     vocabulary = set()
+
     for file in files:
-        vocabulary.update(set(read_all_terms_from_file_to_lower(file_name=file)))
+        vocabulary.update(
+            set(
+                read_all_terms_from_file_to_lower(
+                    file_name=file, stemmer=stemmer, stopwords=stopwords
+                )
+            )
+        )
 
     return list(vocabulary)
 
@@ -148,24 +155,36 @@ def build_tf_idf_by_file_dict(
 
 def calculate_tf_idf(
     vocabulary: List[str],
-    query: str = "",
+    query: Optional[str] = None,
     document_files: Iterable[str] = ("document.txt",),
-) -> Dict[str, Dict[str, float]]:
+    stopwords: Collection[str] = [],
+    stemmer: Callable[[str], str] = lambda x: x,
+) -> Tuple[Dict[str, TF_IDF], IdfBuilder]:
     """
     Given a dict of bags of words and the files names, calculate the tf-idf of each
     """
-    idf_builder = IdfBuilder(vocabulary=vocabulary)
+    idf_builder = IdfBuilder(vocabulary=vocabulary, stopwords=stopwords)
     tf_by_file: Dict[str, TF] = {}
 
-    query_terms = [remove_special_chars(term.lower()) for term in query.strip().split()]
-    query_tf = TfBuilder.calculate_tf(query_terms, vocabulary)
+    tf_builder = TfBuilder(stopwords=stopwords)
+    query_tf = {}
+    if query:
+        query_terms = [
+            stemmer(remove_special_chars(term.lower()))
+            for term in query.strip().split()
+        ]
+        query_tf = tf_builder.calculate_tf(query_terms, vocabulary)
 
     for file in document_files:
         # considering that we are iterating through the file content twice
         # we could optimize this by creating a function that returns both
         # but for now it's ok
-        file_content = read_all_terms_from_file_to_lower(file_name=file)
-        tf = TfBuilder.calculate_tf(file_content, vocabulary)
+        file_content = read_all_terms_from_file_to_lower(
+            file_name=file,
+            stopwords=stopwords,
+            stemmer=stemmer,
+        )
+        tf = tf_builder.calculate_tf(file_content, vocabulary)
         idf_builder.add_document_terms(set(file_content))
 
         tf_by_file.update({file: tf})
@@ -177,14 +196,17 @@ def calculate_tf_idf(
         tf_by_file=tf_by_file, idf_builder=idf_builder
     )
 
-    # Calculate tf-idf for query terms
-    query_tf_idf = build_tf_idf_by_file_dict(
-        tf_by_file={"query": query_tf}, idf_builder=idf_builder
-    )
+    if query:
+        # Calculate tf-idf for query terms
+        query_tf_idf = build_tf_idf_by_file_dict(
+            tf_by_file={"query": query_tf}, idf_builder=idf_builder
+        )
 
-    tf_idf_by_file.update(query_tf_idf)
+        tf_idf_by_file.update(query_tf_idf)
 
-    return tf_idf_by_file
+    # Returning also the idf_builder so it's easier to calculate the tf-idf of a new
+    # query
+    return tf_idf_by_file, idf_builder
 
 
 def get_all_files_in_directory(directory_name: str) -> List[str]:
@@ -221,7 +243,14 @@ def calculate_cross_product_and_norm(
 
 
 def calculate_vsm(
-    query: str, documents_dir: str = "./arquivos/todo", vocab_file: str = "vocabulario"
+    query: str,
+    documents_dir: str = "./arquivos/todo",
+    vocab_file: str = "vocabulario",
+    vocabulary: List[str] = [],
+    stopwords: Collection[str] = [],
+    stemmer: Callable[[str], str] = lambda x: x,
+    tf_idf: Dict[str, Dict[str, float]] = {},
+    tf_builder: Optional[TfBuilder] = None,
 ) -> Dict[str, float]:
     """
     Given a vocabulary file, a directory with documents and a query, calculate the
@@ -233,15 +262,38 @@ def calculate_vsm(
     :return: a dict of the type {document_name: vsm}
     """
     # read the vocabulary
-    vocabulary = read_all_terms_from_file_to_lower(file_name=vocab_file)
-    tf_idf = calculate_tf_idf(
-        document_files=get_all_files_in_directory(documents_dir),
-        vocabulary=vocabulary,
-        query=query,
-    )
 
-    query_tf_idf = tf_idf["query"]
-    del tf_idf["query"]
+    if not vocabulary and not tf_idf:
+        vocabulary = read_all_terms_from_file_to_lower(
+            file_name=vocab_file,
+            stopwords=stopwords,
+            stemmer=stemmer,
+        )
+
+    if not tf_idf:
+        tf_idf, _ = calculate_tf_idf(
+            document_files=get_all_files_in_directory(documents_dir),
+            vocabulary=vocabulary,
+            query=query,
+            stopwords=stopwords,
+            stemmer=stemmer,
+        )
+
+    print(vocabulary)
+    print(tf_idf)
+
+    if not tf_builder:
+        tf_builder = TfBuilder(stopwords=stopwords, stemmer=stemmer)
+
+    if "query" in tf_idf:
+        query_tf_idf = tf_idf["query"]
+        del tf_idf["query"]
+    else:
+        # calculate tf-idf for the query
+        query_terms = query.split()
+        query_tf_idf = tf_builder.calculate_tf(
+            words=map(stemmer, query_terms), vocabulary=vocabulary
+        )
 
     similarities = {}
 
@@ -249,41 +301,10 @@ def calculate_vsm(
         cross_product, doc_norm, query_norm = calculate_cross_product_and_norm(
             first=this_tf_idf, second=query_tf_idf
         )
-        similarities[doc] = cross_product / (doc_norm * query_norm)
+
+        if doc_norm == 0 or query_norm == 0:
+            similarities[doc] = 0
+        else:
+            similarities[doc] = cross_product / (doc_norm * query_norm)
 
     return similarities
-
-
-def calculate_vsm_using_nltk(
-    query: str, documents_dir: str = "./arquivos/todo", vocab_file: str = "vocabulario"
-) -> Dict[str, float]:
-    from nltk.tokenize import word_tokenize
-    import nltk
-
-    query = "to do"
-
-    nltk.download("stopwords")
-    time = datetime.datetime.now()
-
-    file = open("./arquivos/musicas/beat_it.txt", "r")
-    text = file.read()
-    file.close()
-    # text_words_min = re.findall(r"\b[A-zÀ-úü]+\b", text.lower())
-
-    print(nltk.word_tokenize("eu"))
-
-    stopwords = nltk.corpus.stopwords.words("english")
-    list_stopwords_english = set(stopwords)
-
-    # text_sem_stopwords = [w for w in text_words_min if w not in list_stopwords_english]
-    text_sem_stopwords = read_all_terms_from_file_to_lower(
-        file_name="./arquivos/musicas/beat_it.txt",
-        stopwords=list_stopwords_english,
-    )
-
-    print(text_sem_stopwords)
-
-    time_end = datetime.datetime.now()
-    print("demorou: ", time_end - time)
-
-    return {}

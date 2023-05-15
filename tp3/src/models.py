@@ -1,17 +1,18 @@
 from collections import Counter
 from math import log2
-from typing import Dict, Iterable, List, Set
+from typing import Callable, Collection, Dict, Iterable, List, Set
 
 
 class IdfBuilder:
     terms_quantity: Dict[str, int]
     idf: Dict[str, float]
 
-    def __init__(self, vocabulary: List[str] = []) -> None:
+    def __init__(self, vocabulary: List[str] = [], stopwords=[]) -> None:
         self.terms_quantity = {}
         self.idf = {}
         self.documents_quantity = 0
         self.vocabulary = vocabulary
+        self.stopwords = stopwords
 
     def add_document_terms(self, terms: Set[str]) -> None:
         self.documents_quantity += 1
@@ -42,8 +43,14 @@ class IdfBuilder:
 
 
 class TfBuilder:
-    @staticmethod
-    def calculate_tf(words: List[str], vocabulary: List[str]) -> Dict[str, float]:
+    def __init__(
+        self, stopwords: Collection[str], stemmer: Callable[[str], str] = lambda x: x
+    ) -> None:
+        self.stopwords = [stemmer(stopword) for stopword in stopwords]
+
+    def calculate_tf(
+        self, words: Iterable[str], vocabulary: List[str], use_stemmed=False
+    ) -> Dict[str, float]:
         """
         Given a list of words and a vocabulary, calculate the tf of each word in the
         document that is in the vocabulary, and 0 for the ones that are only in the
@@ -59,8 +66,10 @@ class TfBuilder:
 
         # calculate tf using the words that are in the vocabulary
         tf = {}
+
+        # stopwords = self.stopwords_stemmed if use_stemmed else self.stopwords
         for word in vocabulary:
-            if word in words_frequency:
+            if word in words_frequency and word not in self.stopwords:
                 tf[word] = 1 + log2(words_frequency[word])
             else:
                 tf[word] = 0
