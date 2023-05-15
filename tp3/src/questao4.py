@@ -67,6 +67,7 @@ def questao4(documents_path: str = "arquivos/musicas"):
             stopwords=stopwords,
             tf_idf=tf_idf_without_stemming,
             tf_builder=tf_builder_without_stemming,
+            idf_builder=idf_builder_without_stemming,
         )
 
         print("Similaridades sem stemming")
@@ -80,6 +81,7 @@ def questao4(documents_path: str = "arquivos/musicas"):
             stemmer=stemmer,
             tf_idf=tf_idf_with_stemming,
             tf_builder=tf_builder_with_stemming,
+            idf_builder=idf_builder_with_stemming,
         )
 
         print("Similaridades com stemming")

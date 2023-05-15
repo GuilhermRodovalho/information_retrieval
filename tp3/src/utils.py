@@ -250,6 +250,7 @@ def calculate_vsm(
     stopwords: Collection[str] = [],
     stemmer: Callable[[str], str] = lambda x: x,
     tf_idf: Dict[str, Dict[str, float]] = {},
+    idf_builder: Optional[IdfBuilder] = None,
     tf_builder: Optional[TfBuilder] = None,
 ) -> Dict[str, float]:
     """
@@ -263,24 +264,23 @@ def calculate_vsm(
     """
     # read the vocabulary
 
-    if not vocabulary and not tf_idf:
+    if tf_idf and not idf_builder:
+        raise Exception("tf_idf and idf_builder must be passed together")
+
+    if not vocabulary:
         vocabulary = read_all_terms_from_file_to_lower(
             file_name=vocab_file,
             stopwords=stopwords,
             stemmer=stemmer,
         )
 
-    if not tf_idf:
-        tf_idf, _ = calculate_tf_idf(
+    if not tf_idf or not idf_builder:
+        tf_idf, idf_builder = calculate_tf_idf(
             document_files=get_all_files_in_directory(documents_dir),
             vocabulary=vocabulary,
-            query=query,
             stopwords=stopwords,
             stemmer=stemmer,
         )
-
-    print(vocabulary)
-    print(tf_idf)
 
     if not tf_builder:
         tf_builder = TfBuilder(stopwords=stopwords, stemmer=stemmer)
@@ -291,9 +291,12 @@ def calculate_vsm(
     else:
         # calculate tf-idf for the query
         query_terms = query.split()
-        query_tf_idf = tf_builder.calculate_tf(
+        query_tf = tf_builder.calculate_tf(
             words=map(stemmer, query_terms), vocabulary=vocabulary
         )
+        query_tf_idf = {
+            word: query_tf[word] * idf_builder[word] for word in query_tf.keys()
+        }
 
     similarities = {}
 
