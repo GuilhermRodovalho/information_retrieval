@@ -1,3 +1,4 @@
+import time
 from utils import (
     calculate_vsm,
     calculate_tf_idf,
@@ -8,8 +9,6 @@ from utils import (
 
 def questao2(documents_path: str = "arquivos/todo"):
     # read the vocabulary
-
-    vocabulary = build_vocabulary_from_files(["vocabulario"])
 
     print(
         calculate_vsm(

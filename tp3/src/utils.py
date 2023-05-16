@@ -144,18 +144,23 @@ def build_tf_idf_by_file_dict(
 ) -> Dict[str, Dict[str, float]]:
     tf_idf_by_file: Dict[str, Dict[str, float]] = {}
 
-    # calculate the tf_idf by file
     for file, tf in tf_by_file.items():
         tf_idf_by_file.update(
-            {file: {word: tf[word] * idf_builder[word] for word in tf.keys()}}
+            {file: calculate_tf_idf(tf, idf_builder, list(tf.keys()))}
         )
 
     return tf_idf_by_file
 
 
-def calculate_tf_idf(
+def calculate_tf_idf(tf: TF, idf: IdfBuilder, vocabulary: List[str]) -> TF_IDF:
+    tf_idf = {}
+    for term in vocabulary:
+        tf_idf[term] = tf[term] * idf[term]
+    return tf_idf
+
+
+def get_tf_idf(
     vocabulary: List[str],
-    query: Optional[str] = None,
     document_files: Iterable[str] = ("document.txt",),
     stopwords: Collection[str] = [],
     stemmer: Callable[[str], str] = lambda x: x,
@@ -164,21 +169,10 @@ def calculate_tf_idf(
     Given a dict of bags of words and the files names, calculate the tf-idf of each
     """
     idf_builder = IdfBuilder(vocabulary=vocabulary, stopwords=stopwords)
+    tf_builder = TfBuilder(stopwords=stopwords)
     tf_by_file: Dict[str, TF] = {}
 
-    tf_builder = TfBuilder(stopwords=stopwords)
-    query_tf = {}
-    if query:
-        query_terms = [
-            stemmer(remove_special_chars(term.lower()))
-            for term in query.strip().split()
-        ]
-        query_tf = tf_builder.calculate_tf(query_terms, vocabulary)
-
     for file in document_files:
-        # considering that we are iterating through the file content twice
-        # we could optimize this by creating a function that returns both
-        # but for now it's ok
         file_content = read_all_terms_from_file_to_lower(
             file_name=file,
             stopwords=stopwords,
@@ -196,16 +190,8 @@ def calculate_tf_idf(
         tf_by_file=tf_by_file, idf_builder=idf_builder
     )
 
-    if query:
-        # Calculate tf-idf for query terms
-        query_tf_idf = build_tf_idf_by_file_dict(
-            tf_by_file={"query": query_tf}, idf_builder=idf_builder
-        )
-
-        tf_idf_by_file.update(query_tf_idf)
-
     # Returning also the idf_builder so it's easier to calculate the tf-idf of a new
-    # query
+    # query or document
     return tf_idf_by_file, idf_builder
 
 
@@ -226,20 +212,15 @@ def get_all_files_in_directory(directory_name: str) -> List[str]:
     return files_names
 
 
-def calculate_cross_product_and_norm(
-    first: TF_IDF, second: TF_IDF
-) -> Tuple[float, float, float]:
-    cross_product = 0
+def cosine_similarity(a: TF_IDF, b: TF_IDF) -> float:
+    # dot_product = sum(i * j for i, j in zip(a, b))
+    dot_product = sum(a[word] * b[word] for word in a.keys())
 
-    norm_first = 0
-    norm_second = 0
-
-    for word, tf_idf in first.items():
-        cross_product += tf_idf * second[word]
-        norm_first += tf_idf**2
-        norm_second += second[word] ** 2
-
-    return cross_product, sqrt(norm_first), sqrt(norm_second)
+    magnitude_a = sqrt(sum(i * i for i in a.values()))
+    magnitude_b = sqrt(sum(i * i for i in b.values()))
+    if magnitude_a == 0 or magnitude_b == 0:
+        return 0.0
+    return dot_product / (magnitude_a * magnitude_b)
 
 
 def calculate_vsm(
@@ -275,7 +256,7 @@ def calculate_vsm(
         )
 
     if not tf_idf or not idf_builder:
-        tf_idf, idf_builder = calculate_tf_idf(
+        tf_idf, idf_builder = get_tf_idf(
             document_files=get_all_files_in_directory(documents_dir),
             vocabulary=vocabulary,
             stopwords=stopwords,
@@ -285,29 +266,18 @@ def calculate_vsm(
     if not tf_builder:
         tf_builder = TfBuilder(stopwords=stopwords, stemmer=stemmer)
 
-    if "query" in tf_idf:
-        query_tf_idf = tf_idf["query"]
-        del tf_idf["query"]
-    else:
-        # calculate tf-idf for the query
-        query_terms = query.split()
-        query_tf = tf_builder.calculate_tf(
-            words=map(stemmer, query_terms), vocabulary=vocabulary
-        )
-        query_tf_idf = {
-            word: query_tf[word] * idf_builder[word] for word in query_tf.keys()
-        }
+    # calculate tf-idf for the query
+    query_terms = query.split()
+    query_tf = tf_builder.calculate_tf(
+        words=map(stemmer, query_terms), vocabulary=vocabulary
+    )
+    query_tf_idf = {
+        word: query_tf[word] * idf_builder[word] for word in query_tf.keys()
+    }
 
     similarities = {}
 
     for doc, this_tf_idf in tf_idf.items():
-        cross_product, doc_norm, query_norm = calculate_cross_product_and_norm(
-            first=this_tf_idf, second=query_tf_idf
-        )
-
-        if doc_norm == 0 or query_norm == 0:
-            similarities[doc] = 0
-        else:
-            similarities[doc] = cross_product / (doc_norm * query_norm)
+        similarities[doc] = cosine_similarity(query_tf_idf, this_tf_idf)
 
     return similarities

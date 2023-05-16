@@ -3,8 +3,7 @@ from utils import (
     calculate_vsm,
     build_vocabulary_from_files,
     get_all_files_in_directory,
-    calculate_tf_idf,
-    build_tf_idf_by_file_dict,
+    get_tf_idf,
 )
 from models import TfBuilder
 
@@ -30,12 +29,12 @@ def questao4(documents_path: str = "arquivos/musicas"):
     )
 
     # calculate tf-idf for all documents before hand so we don't have to do it for each query
-    tf_idf_without_stemming, idf_builder_without_stemming = calculate_tf_idf(
+    tf_idf_without_stemming, idf_builder_without_stemming = get_tf_idf(
         document_files=get_all_files_in_directory(directory_name=documents_path),
         vocabulary=vocabulary,
         stopwords=stopwords,
     )
-    tf_idf_with_stemming, idf_builder_with_stemming = calculate_tf_idf(
+    tf_idf_with_stemming, idf_builder_with_stemming = get_tf_idf(
         document_files=get_all_files_in_directory(directory_name=documents_path),
         vocabulary=vocabulary_with_stem,
         stopwords=stopwords,
@@ -52,8 +51,6 @@ def questao4(documents_path: str = "arquivos/musicas"):
 
     tf_builder_without_stemming = TfBuilder(stopwords=stopwords)
     tf_builder_with_stemming = TfBuilder(stopwords=stopwords, stemmer=stemmer)
-
-    # check if the words are in the vocabulary
 
     for query in queries[0:1]:
         print("===========================================")

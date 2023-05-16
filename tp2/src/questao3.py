@@ -10,13 +10,22 @@ from utils import (
 
 def largest_tf_idf(tf_idf: Dict[str, Dict[str, float]]) -> Tuple[str, str, float]:
     largest_term, largest_tf_idf, document = "", 0, ""
+    second_largest_term, second_largest_tf_idf, second_document = "", 0, ""
     # find the largest tf-idf
     for file, terms in tf_idf.items():
         for term, val in terms.items():
             if val > largest_tf_idf:
+                second_largest_tf_idf = largest_tf_idf
+                second_largest_term = largest_term
+                second_document = document
+
                 largest_tf_idf = val
                 largest_term = term
                 document = file
+            elif val > second_largest_tf_idf:
+                second_largest_tf_idf = val
+                second_largest_term = term
+                second_document = file
 
     return largest_term, document, largest_tf_idf
 
@@ -39,9 +48,13 @@ def questao3(documents_path: str = "arquivos/musicas"):
 
     tf_idf_time = time_after - time_before
 
-    largest_term, largest_value, document = largest_tf_idf(tf_idf)
-
     print(tf_idf)
+
+    # print the eileen tf-idf
+    print("Eileen tf-idf")
+    print(tf_idf["arquivos/musicas/come_on_eileen.txt"]["eileen"])
+
+    largest_term, largest_value, document = largest_tf_idf(tf_idf)
     print("Took {} seconds to build the vocabulary".format(vocabulary_time))
     print("The vocabulary has {} terms".format(len(vocabulary)))
     print("Took {} seconds to calculate the tf-idf".format(tf_idf_time))
