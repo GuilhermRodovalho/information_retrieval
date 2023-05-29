@@ -1,22 +1,21 @@
-import time
-from utils import (
-    calculate_vsm,
-    calculate_tf_idf,
-    build_vocabulary_from_files,
-    get_all_files_in_directory,
-)
+from utils import calculate_vsm, print_sorted_similarities
 
 
-def questao2(documents_path: str = "arquivos/todo"):
+def questao2(
+    vocab_file: str = "vocabulario",
+    documents_path: str = "arquivos/todo",
+    query: str = "to do",
+):
     # read the vocabulary
 
-    print(
-        calculate_vsm(
-            query="to do",
-            documents_dir=documents_path,
-            vocab_file="vocabulario",
-        )
+    similarities = calculate_vsm(
+        query=query,
+        documents_dir=documents_path,
+        vocab_file=vocab_file,
     )
+
+    print("Similarities:")
+    print_sorted_similarities(similarities)
 
 
 questao2()

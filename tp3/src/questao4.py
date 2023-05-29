@@ -52,7 +52,7 @@ def questao4(documents_path: str = "arquivos/musicas"):
     tf_builder_without_stemming = TfBuilder(stopwords=stopwords)
     tf_builder_with_stemming = TfBuilder(stopwords=stopwords, stemmer=stemmer)
 
-    for query in queries[0:1]:
+    for query in queries:
         print("===========================================")
         print("Query: ", query)
 

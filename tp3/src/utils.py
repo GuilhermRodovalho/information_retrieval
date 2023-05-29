@@ -226,11 +226,11 @@ def cosine_similarity(a: TF_IDF, b: TF_IDF) -> float:
 def calculate_vsm(
     query: str,
     documents_dir: str = "./arquivos/todo",
-    vocab_file: str = "vocabulario",
-    vocabulary: List[str] = [],
+    vocab_file: Optional[str] = None,
+    vocabulary: Optional[List[str]] = [],
     stopwords: Collection[str] = [],
     stemmer: Callable[[str], str] = lambda x: x,
-    tf_idf: Dict[str, Dict[str, float]] = {},
+    tf_idf: Optional[Dict[str, Dict[str, float]]] = None,
     idf_builder: Optional[IdfBuilder] = None,
     tf_builder: Optional[TfBuilder] = None,
 ) -> Dict[str, float]:
@@ -243,17 +243,24 @@ def calculate_vsm(
     :param query: the user query
     :return: a dict of the type {document_name: vsm}
     """
-    # read the vocabulary
 
     if tf_idf and not idf_builder:
         raise Exception("tf_idf and idf_builder must be passed together")
 
+    # read the vocabulary
     if not vocabulary:
-        vocabulary = read_all_terms_from_file_to_lower(
-            file_name=vocab_file,
-            stopwords=stopwords,
-            stemmer=stemmer,
-        )
+        if vocab_file:
+            vocabulary = read_all_terms_from_file_to_lower(
+                file_name=vocab_file,
+                stopwords=stopwords,
+                stemmer=stemmer,
+            )
+        else:
+            vocabulary = build_vocabulary_from_files(
+                files=get_all_files_in_directory(documents_dir),
+                stopwords=stopwords,
+                stemmer=stemmer,
+            )
 
     if not tf_idf or not idf_builder:
         tf_idf, idf_builder = get_tf_idf(
@@ -281,3 +288,19 @@ def calculate_vsm(
         similarities[doc] = cosine_similarity(query_tf_idf, this_tf_idf)
 
     return similarities
+
+
+def print_sorted_similarities(similarities: Dict[str, float]) -> None:
+    """
+    Given a dict of the type {document_name: similarity}, print the similarities
+    sorted by the similarity value
+
+    :param similarities: the dict of similarities
+    :return: None
+    """
+    sorted_similarities = sorted(
+        similarities.items(), key=lambda item: item[1], reverse=True
+    )
+
+    for doc, similarity in sorted_similarities:
+        print(f"{doc}: {similarity}")

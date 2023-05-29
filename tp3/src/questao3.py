@@ -1,6 +1,6 @@
 import time
 from typing import Dict, Tuple
-from utils import calculate_vsm
+from utils import calculate_vsm, print_sorted_similarities
 
 
 def questao3(documents_path: str = "arquivos/todo"):
@@ -11,14 +11,15 @@ def questao3(documents_path: str = "arquivos/todo"):
 
     stopwords = set(nltk.corpus.stopwords.words("english"))
 
-    print(
-        calculate_vsm(
-            query="to do",
-            documents_dir=documents_path,
-            vocab_file="vocabulario",
-            stopwords=stopwords,
-        )
+    similarities = calculate_vsm(
+        query="to do",
+        documents_dir=documents_path,
+        vocab_file="vocabulario",
+        stopwords=stopwords,
     )
+
+    print("Similarities:")
+    print_sorted_similarities(similarities)
 
 
 questao3()
