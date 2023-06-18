@@ -161,4 +161,6 @@ cython_debug/
 .idea/
 
 # Entregas de GSI024 
-entregas
+tp2/entregas/*
+
+
